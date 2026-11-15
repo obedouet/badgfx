@@ -1,0 +1,5 @@
+# Object files
+*.o
+
+# Example binaries
+examples/HelloWorld/helloworld
