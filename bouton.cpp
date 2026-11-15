@@ -3,10 +3,8 @@
 
 #define HAUTEUR_BOUTON 20
 
-Bouton::Bouton(Fenetre *fen, Coord *coords, char *txt, int typ)
+Bouton::Bouton(Fenetre *fen, Coord *coords, const char *txt, int typ)
 {
-	SAUVE;
-	INSTALL("Bouton::Bouton()");
 
 	f = fen;
 
@@ -15,9 +13,14 @@ Bouton::Bouton(Fenetre *fen, Coord *coords, char *txt, int typ)
 	b_position.y = coords->y;
 
 	// Calcul la largeur en fct du texte
+	if (txt == NULL)
+	{
+		txt = "";
+	}
+
 	b_width = strlen(txt) * 10;
 	b_height = HAUTEUR_BOUTON;
-	strcpy(b_title, txt);
+	CopieChaine(b_title, txt, sizeof(b_title));
 
 	// Si c'est une 'CHECKBOX'
 	b_type = typ;
@@ -35,7 +38,6 @@ Bouton::Bouton(Fenetre *fen, Coord *coords, char *txt, int typ)
 	// Par defaut ne fait rien
 	Action=NULL;
 
-	RESTORE;
 }
 
 /* Le destructeur ne fait rien içi
@@ -51,8 +53,6 @@ Bouton::~Bouton()
  */
 void Bouton::Dessine_Bouton()
 {
-	SAUVE;
-	INSTALL("Bouton::Dessine_Bouton()");
 
 	switch (b_type)
 	{
@@ -135,7 +135,6 @@ void Bouton::Dessine_Bouton()
 
 	// Force la mise a jour
 	XFlush(f->display);
-	RESTORE;
 }
 
 /*
@@ -145,8 +144,6 @@ void Bouton::Dessine_Bouton()
  */
 void Bouton::Dessine_InvertBouton()
 {
-	SAUVE;
-	INSTALL("Bouton::Dessine_InvertBouton()");
 
 	// Contour
 	XSetForeground(f->display, f->contexte_graphique, f->ChargeCouleur("white"));
@@ -169,13 +166,10 @@ void Bouton::Dessine_InvertBouton()
 	// Remet la couleur d'origine
 	XSetForeground(f->display, f->contexte_graphique, f->avant_plan);
 	
-	RESTORE;
 }
 
 void Bouton::Rafraichir()
 {
-	SAUVE;
-	INSTALL("Bouton::Rafraichir()");
 
 	if (b_type == NORMAL && b_etat == DISABLED)
 	{
@@ -184,7 +178,6 @@ void Bouton::Rafraichir()
 	else
 		Dessine_Bouton();
 
-	RESTORE;
 }
 
 /*
@@ -194,8 +187,6 @@ void Bouton::Rafraichir()
  */
 int Bouton::OnClic(Evenement *evt)
 {
-	SAUVE;
-	INSTALL("Bouton::OnClic()");
 
 	if ((evt->x_coord - DEC >= b_position.x) &&
 		(evt->x_coord - DEC <= b_position.x + b_width) &&
@@ -223,7 +214,6 @@ int Bouton::OnClic(Evenement *evt)
 		}
 		// Ajouter içi le code pour gerer une CHECKBOX
 
-		RESTORE;
 		return 1;
 	}
 	else
@@ -233,7 +223,6 @@ int Bouton::OnClic(Evenement *evt)
 			b_etat = ENABLED;
 	}
 
-	RESTORE;
 	return 0;
 }
 
@@ -243,8 +232,6 @@ int Bouton::OnClic(Evenement *evt)
  */
 int Bouton::OnMove(Evenement *evt)
 {
-	SAUVE;
-	INSTALL("Bouton::OnMove()");
 
 	if (! ((evt->x_coord - DEC >= b_position.x) &&
 		(evt->x_coord - DEC <= b_position.x + b_width) &&
@@ -259,7 +246,6 @@ int Bouton::OnMove(Evenement *evt)
 			b_etat = STANDBY;
 			Dessine_Bouton();
 
-			RESTORE;
 			return 1;
 		}
 	}
@@ -275,11 +261,9 @@ int Bouton::OnMove(Evenement *evt)
 			Dessine_InvertBouton();
 		}
 
-		RESTORE;
 		return 1;
 	}
 
-	RESTORE;
 	return 0;
 }
 
@@ -288,6 +272,7 @@ int Bouton::OnMove(Evenement *evt)
  */
 int Bouton::OnKey(Evenement *evt)
 {
+	(void) evt;
 	return 0;
 }
 
@@ -306,12 +291,17 @@ void Bouton::ChgAction(void (*fct)(Composant *C))
  * Entree : pointeur sur une chaine
  * Sortie : resultat si changement accepté
  */
-int Bouton::ChgTexte(char *txt)
+int Bouton::ChgTexte(const char *txt)
 {
-	if (strlen(txt) * 10 <= b_width)
+	if (txt == NULL)
+	{
+		txt = "";
+	}
+
+	if (static_cast<int>(strlen(txt) * 10) <= b_width)
 	{
 		// Changement accepté
-		strcpy(b_title, txt);
+		CopieChaine(b_title, txt, sizeof(b_title));
 
 		// Efface l'ancien titre
 		XSetForeground(f->display, f->contexte_graphique, f->arr_plan);

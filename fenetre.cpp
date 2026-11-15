@@ -9,9 +9,21 @@
 Fenetre::Fenetre(void)
 {
 	First_Comp = NULL;
+	f_titre = NULL;
 
 	largeur = 640;
 	hauteur = 480;
+
+	display = NULL;
+	fenetre = 0;
+	contexte_graphique = NULL;
+	ecran = 0;
+	avant_plan = 0;
+	arr_plan = 0;
+	wm_protocols = 0;
+	wm_delete = 0;
+	pas_fini = 1;
+	touche = 0;
 
 	if (!OuvreFenetre())
 	{
@@ -26,9 +38,21 @@ Fenetre::Fenetre(void)
 Fenetre::Fenetre(int l, int h)
 {
 	First_Comp = NULL;
+	f_titre = NULL;
 
 	largeur = l;
 	hauteur = h;
+
+	display = NULL;
+	fenetre = 0;
+	contexte_graphique = NULL;
+	ecran = 0;
+	avant_plan = 0;
+	arr_plan = 0;
+	wm_protocols = 0;
+	wm_delete = 0;
+	pas_fini = 1;
+	touche = 0;
 
 	if (!OuvreFenetre())
 	{
@@ -40,13 +64,24 @@ Fenetre::Fenetre(int l, int h)
 /* Encore un autre constructeur
  * Entree : largeur, hauteur, titre
  */
-Fenetre::Fenetre(int l, int h, char *f_title)
+Fenetre::Fenetre(int l, int h, const char *f_title)
 {
 	First_Comp = NULL;
 
 	largeur = l;
 	hauteur = h;
 	f_titre = f_title;
+
+	display = NULL;
+	fenetre = 0;
+	contexte_graphique = NULL;
+	ecran = 0;
+	avant_plan = 0;
+	arr_plan = 0;
+	wm_protocols = 0;
+	wm_delete = 0;
+	pas_fini = 1;
+	touche = 0;
 
 	if (!OuvreFenetre())
 	{
@@ -68,21 +103,15 @@ Fenetre::~Fenetre(void)
  */
 int Fenetre::OuvreFenetre(void)
 {
-	SAUVE;
-	INSTALL("Fenetre::OuvreFenetre()");
+	const char	*titre;
 
 	display = XOpenDisplay(NULL);
 	if (display == NULL)
 	{
 		fprintf(stderr, "ERREUR: OuvreFenetre() : impossible d'ouvrir le display.\n");
-		RESTORE;
 		return 0;
 	}
 
-        /*
- 	 * selection de l'ecran par defaut, dans le cas ou il y en a plusieurs
-	 * et des couleurs.
-	 */
 	ecran = DefaultScreen(display);
 	arr_plan = ChargeCouleur("grey");
 	avant_plan = BlackPixel(display, ecran);
@@ -101,19 +130,30 @@ int Fenetre::OuvreFenetre(void)
 	fenetre = XCreateSimpleWindow(display, DefaultRootWindow(display),
 			infos.x, infos.y, infos.width, infos.height,
 			0, 0, arr_plan);
+	if (fenetre == 0)
+	{
+		XCloseDisplay(display);
+		display = NULL;
+		return 0;
+	}
 
-	/*
-	 * Choix des proprietes qui seront donnees au WindowsManager.
-	 * Une autre procedure peut-etre utilisee a cet effet : XSetWMProperties()
-	 */
-	XSetStandardProperties(display, fenetre, f_titre == NULL ? "Bad Gfx": f_titre, f_titre == NULL ? "Bad Gfx" : f_titre,
-				None, NULL, 0, &infos);
+	titre = (f_titre == NULL ? "Bad Gfx" : f_titre);
+	XStoreName(display, fenetre, const_cast<char *>(titre));
+	XSetWMNormalHints(display, fenetre, &infos);
 
 	/*
 	 * Demande au Xserveur de nous creer un nouveau contexte graphique
 	 * utilise pour les affichages de textes ou de graphiques.
 	 */
 	contexte_graphique = XCreateGC(display, fenetre, 0, NULL);
+	if (contexte_graphique == NULL)
+	{
+		XDestroyWindow(display, fenetre);
+		XCloseDisplay(display);
+		fenetre = 0;
+		display = NULL;
+		return 0;
+	}
 
 	XSetBackground(display, contexte_graphique, arr_plan);
 	XSetForeground(display, contexte_graphique, avant_plan);
@@ -122,13 +162,16 @@ int Fenetre::OuvreFenetre(void)
 	XSelectInput(display, fenetre, 
 		ButtonPressMask|ButtonReleaseMask|\
 		KeyPressMask|KeyReleaseMask|\
-		PointerMotionMask|ExposureMask);
-		
+		PointerMotionMask|ExposureMask|StructureNotifyMask);
 
-        /* Rendre la fenetre visible */
+	wm_protocols = XInternAtom(display, "WM_PROTOCOLS", False);
+	wm_delete = XInternAtom(display, "WM_DELETE_WINDOW", False);
+	XSetWMProtocols(display, fenetre, &wm_delete, 1);
+
+	/* Rendre la fenetre visible */
 	XMapRaised(display, fenetre);
+	XFlush(display);
 
-	RESTORE;
 	return 1;
 }
 
@@ -138,9 +181,25 @@ int Fenetre::OuvreFenetre(void)
  */
 void Fenetre::FermeFenetre(void)
 {
-	XFreeGC(display, contexte_graphique);
-	XDestroyWindow(display, fenetre);
+	if (display == NULL)
+	{
+		return;
+	}
+
+	if (contexte_graphique != NULL)
+	{
+		XFreeGC(display, contexte_graphique);
+		contexte_graphique = NULL;
+	}
+
+	if (fenetre != 0)
+	{
+		XDestroyWindow(display, fenetre);
+		fenetre = 0;
+	}
+
 	XCloseDisplay(display);
+	display = NULL;
 }
 
 /* Fonction d'attente d'un evenement 
@@ -150,16 +209,22 @@ void Fenetre::FermeFenetre(void)
  */
 void Fenetre::AttenteEvenement(Evenement *evt)
 {
-	SAUVE;
-	INSTALL("Fenetre::AttenteEvenement()");
-	
+	if (display == NULL)
+	{
+		if (evt != NULL)
+		{
+			evt->type = AUTRE;
+		}
+
+		return;
+	}
+
 	// Attente de l'evenement X
 	XNextEvent(display, &evenement);
 
 	// Traitement de l'evenement
 	TraiteEvenement(evt);
 
-	RESTORE;
 }
 
 /* Fonction de traitement d'un evenement
@@ -169,8 +234,13 @@ void Fenetre::AttenteEvenement(Evenement *evt)
 void Fenetre::TraiteEvenement(Evenement *evt)
 {
 	Composant	*courant;
-	SAUVE;
-	INSTALL("Fenetre::TraiteEvenement()");
+
+	if (evt == NULL)
+	{
+		return;
+	}
+
+	evt->type = AUTRE;
 
 	switch(evenement.type)
 	{
@@ -178,14 +248,12 @@ void Fenetre::TraiteEvenement(Evenement *evt)
 			// Il faut rafraichir la fenetre
 			if (evenement.xexpose.count == 0)
 			{
-				evt->type = AUTRE;
 				Rafraichir();
 			}
 			break;
 
 		case MappingNotify:
 			// Mapping du clavier modifie
-			evt->type = AUTRE;
 			XRefreshKeyboardMapping((XMappingEvent *) &evenement);
 			break;
 
@@ -198,7 +266,7 @@ void Fenetre::TraiteEvenement(Evenement *evt)
 			evt->y_coord = evenement.xbutton.y;
 
 			// Appel les composants
-			courant = (Composant *) First_Comp;
+			courant = First_Comp;
 			while (courant)
 			{
 				courant->OnMove(evt);
@@ -234,7 +302,7 @@ void Fenetre::TraiteEvenement(Evenement *evt)
 			}
 
 			/* Appel les composants */
-			courant = (Composant *) First_Comp;
+			courant = First_Comp;
 			while (courant)
 			{
 				courant->OnClic(evt);
@@ -249,7 +317,7 @@ void Fenetre::TraiteEvenement(Evenement *evt)
 			evt->lu_clavier = XLookupString((XKeyEvent *) &evenement, evt->buf_clavier, 15, &touche, NULL);
 
 			/* Appel les composants */
-			courant = (Composant *) First_Comp;
+			courant = First_Comp;
 			while (courant)
 			{
 				courant->OnKey(evt);
@@ -258,8 +326,21 @@ void Fenetre::TraiteEvenement(Evenement *evt)
 
 			break;
 
+		case ClientMessage:
+			if ((Atom)evenement.xclient.data.l[0] == wm_delete)
+			{
+				FinLoop();
+			}
+			break;
+
+		case DestroyNotify:
+			FinLoop();
+			break;
+
+		default:
+			break;
+
 	}
-	RESTORE;
 }
 
 /* Fonction d'attente d'un evenement 
@@ -269,20 +350,20 @@ void Fenetre::TraiteEvenement(Evenement *evt)
  */
 int Fenetre::CheckEvenement(Evenement *evt)
 {
-	SAUVE;
-	INSTALL("Fenetre::CheckEvenement()");
+	if (display == NULL)
+	{
+		return 0;
+	}
 
 	// Verifie la file d'attente
-	if (XCheckWindowEvent(display, fenetre, ButtonPressMask|ButtonReleaseMask|KeyPressMask|KeyReleaseMask|ExposureMask,&evenement))
+	if (XCheckWindowEvent(display, fenetre, ButtonPressMask|ButtonReleaseMask|KeyPressMask|KeyReleaseMask|ExposureMask|StructureNotifyMask,&evenement))
 	{
 		// Traite l'evenement
 		TraiteEvenement(evt);
 
-		RESTORE;
 		return 1;
 	}
 
-	RESTORE;
 	return 0;
 }
 
@@ -294,14 +375,12 @@ void Fenetre::Rafraichir(void)
 {
 	Composant *courant;
 
-	SAUVE;
-	INSTALL("Fenetre::Rafraichir()");
 
 	/* Efface la fenetre */
 	XClearWindow(display, fenetre);
 
 	/* Re-dessine les composants */
-	courant = (Composant *) First_Comp;
+	courant = First_Comp;
 	while (courant)
 	{
 		courant->Rafraichir();
@@ -310,7 +389,6 @@ void Fenetre::Rafraichir(void)
 
 	XFlush(display);
 
-	RESTORE;
 }
 
 /* Fonction de recherche de la valeur d'une couleur
@@ -318,23 +396,27 @@ void Fenetre::Rafraichir(void)
  * Entree : nom de la couleur en anglais
  * Sortie : la valeur
  */
-int Fenetre::ChargeCouleur(char *str)
+unsigned long Fenetre::ChargeCouleur(const char *str)
 {
 	/* Variable temporaire */
-	XGCValues xgcvalues;
-	XColor xcolour;
+	XColor	xcolour;
+
+	if (display == NULL || str == NULL)
+	{
+		return 0;
+	}
 
 	/* On recherche la couleur la plus proche */
-	if (XParseColor (display, DefaultColormap(display, DefaultScreen(display)), str, &xcolour))
+	if (XParseColor (display, DefaultColormap(display, ecran), str, &xcolour))
 	{
 		/* Et on l'alloue */
-		if (XAllocColor (display, DefaultColormap(display, DefaultScreen(display)), &xcolour))
+		if (XAllocColor (display, DefaultColormap(display, ecran), &xcolour))
 		{
-			xgcvalues.foreground = xcolour.pixel;
+			return xcolour.pixel;
 		}
 	}
 
-	return xgcvalues.foreground;
+	return BlackPixel(display, ecran);
 }
 
 /* Fonction de bouclage principale
@@ -343,16 +425,17 @@ void Fenetre::MainLoop()
 {
 	Evenement event;
 
-	SAUVE;
-	INSTALL("Fenetre::MainLoop()");
+	if (display == NULL)
+	{
+		return;
+	}
 
 	pas_fini = 1;
-	while (pas_fini)
+	while (pas_fini && display != NULL)
 	{
 		AttenteEvenement(&event);
 	}
 
-	RESTORE;
 }
 
 /* Fonction d'arret de la boucle principale
@@ -367,25 +450,26 @@ void Fenetre::FinLoop()
  * Entree : référence sur le composant
  * Sortie : aucune
  */
-void Fenetre::AjouteComposant(void *comp)
+void Fenetre::AjouteComposant(Composant *comp)
 {
-	SAUVE;
-	INSTALL("Fenetre::AjouteComposant()");
+	if (comp == NULL)
+	{
+		return;
+	}
 
 	if (First_Comp == NULL)
 	{
 		/* Création de la liste */
 		First_Comp = comp;
-		((Composant *)comp)->suivant = NULL;
+		comp->suivant = NULL;
 	}
 	else
 	{
 		/* Insertion en tete */
-		((Composant *)comp)->suivant = (Composant *) First_Comp;
+		comp->suivant = First_Comp;
 		First_Comp = comp;
 	}
 
-	RESTORE;
 }
 
 /* Retourne la taille de la fenetre
@@ -401,8 +485,12 @@ void Fenetre::Taille(Coord *f_taille)
 /* Fonction de changement du titre dynamiquement
  * Entree : nouveau titre
  */
-void Fenetre::ChgTitre(char *f_title)
+void Fenetre::ChgTitre(const char *f_title)
 {
 	f_titre = f_title;
-	XStoreName(display, fenetre, f_titre);
+
+	if (display != NULL && fenetre != 0 && f_titre != NULL)
+	{
+		XStoreName(display, fenetre, const_cast<char *>(f_titre));
+	}
 }

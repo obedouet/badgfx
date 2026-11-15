@@ -21,7 +21,7 @@ public:
 	~MessageBox();
 	MessageBox(Fenetre *fen);
 	MessageBox(Fenetre *fen, int msg_hist);
-	void EcritMessage(char *str);
+	void EcritMessage(const char *str);
 	void Rafraichir();
 	int OnClic(Evenement *evt);
 	int OnMove(Evenement *evt);

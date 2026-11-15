@@ -6,7 +6,6 @@
  * Date: 24/03/2002
  */
 
-#define MAIN
 #include <badgfx.hpp>
 
 // On declare la fenetre en premier
@@ -33,7 +32,7 @@ int main(void)
 	Hello.ChgAction(HelloWorld);
 
 	// On enregistre le composant auprès de la fenetre
-	Fen1.AjouteComposant((void *) &Hello);
+	Fen1.AjouteComposant(&Hello);
 
 	// On créé un bouton pour quitter l'application
 	pos.x = 5;
@@ -41,7 +40,7 @@ int main(void)
 	Bouton Quitter(&Fen1, &pos, "Quitter", NORMAL);
 
 	// On enregistre le composant
-	Fen1.AjouteComposant((void *) &Quitter);
+	Fen1.AjouteComposant(&Quitter);
 
 	// On définit son action
 	Quitter.ChgAction(FermerApp);
@@ -49,7 +48,7 @@ int main(void)
 	// Affichage du tout
 	Fen1.MainLoop();
 
-	return 1;
+	return 0;
 }
 
 void HelloWorld(Composant *B)
@@ -68,5 +67,6 @@ void CliquezIci(Composant *B)
 
 void FermerApp(Composant *B)
 {
+	(void) B;
 	Fen1.FinLoop();
 }

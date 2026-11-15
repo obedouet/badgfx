@@ -3,6 +3,11 @@
  *
  */
 
+#ifndef CLASSCOMPOSANT
+#define CLASSCOMPOSANT
+
+class Fenetre;
+
 class Composant
 {
 private:
@@ -18,4 +23,6 @@ public:
 	int virtual OnMove(Evenement *evt)=0;
 	int virtual OnKey(Evenement *evt)=0;
 };
+
+#endif
 

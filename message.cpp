@@ -5,8 +5,6 @@
 
 MessageBox::MessageBox(Fenetre *fen)
 {
-	SAUVE;
-	INSTALL("MessageBox::MessageBox()");
 
 	f = fen;
 
@@ -18,13 +16,10 @@ MessageBox::MessageBox(Fenetre *fen)
 
 	Init();
 
-	RESTORE;
 }
 
 MessageBox::MessageBox(Fenetre *fen, int msg_hist)
 {
-	SAUVE;
-	INSTALL("MessageBox::MessageBox()");
 
 	f = fen;
 
@@ -35,23 +30,22 @@ MessageBox::MessageBox(Fenetre *fen, int msg_hist)
 
 	Init();
 
-	RESTORE;
 }
 
 MessageBox::~MessageBox()
 {
 	int	i;
-	SAUVE;
-	INSTALL("MessageBox::~MessageBox()");
 
 	/* Libere l'historique */
-	for (i = 0 ; i < hist ; i++)
+	if (old_str != NULL)
 	{
-		free(old_str[i]);
+		for (i = 0 ; i < hist ; i++)
+		{
+			free(old_str[i]);
+		}
+		free(old_str);
 	}
-	free(old_str);
 
-	RESTORE;
 }
 
 void MessageBox::Init(void)
@@ -59,6 +53,17 @@ void MessageBox::Init(void)
 	int i;
 
 	Coord taille_fen;
+
+	if (hist <= 0)
+	{
+		hist = 4;
+	}
+
+	if (size_msg <= 0)
+	{
+		size_msg = 45;
+	}
+
 	f->Taille(&taille_fen);
 
 	// Est collé au rebord
@@ -75,21 +80,35 @@ void MessageBox::Init(void)
 
 	/* Construction de l'historique */
 	old_str = (char **) malloc(hist * sizeof(char *));
+	if (old_str == NULL)
+	{
+		hist = 0;
+		num = 0;
+		return;
+	}
+
 	for (i = 0 ; i < hist ; i++)
 	{
-		old_str[i] = (char *) malloc(sizeof(char) * size_msg);
+		old_str[i] = (char *) calloc(size_msg, sizeof(char));
+		if (old_str[i] == NULL)
+		{
+			hist = i;
+			break;
+		}
 	}
 
 	num = 0;
 }
 
-void MessageBox::EcritMessage(char *str)
+void MessageBox::EcritMessage(const char *str)
 {
 	int		i,
 			j;
 
-	SAUVE;
-	INSTALL("MessageBox::EcritMessage()");
+	if (str == NULL || hist <= 0 || old_str == NULL)
+	{
+		return;
+	}
 
 	// Efface la zone 
 	XClearArea(f->display, f->fenetre, zone_msg_x + 3, zone_msg_y + 3, 
@@ -98,7 +117,7 @@ void MessageBox::EcritMessage(char *str)
 	if (num < hist)
 	{
 		// Alloue une nouvelle chaine 
-		strcpy(old_str[num], str);
+		CopieChaine(old_str[num], str, size_msg);
 
 		// Se place sur la prochaine 
 		num++;
@@ -116,8 +135,11 @@ void MessageBox::EcritMessage(char *str)
 		}
 
 		/* Alloue un nouveau */
-		old_str[hist - 1] = (char *) malloc(size_msg * sizeof(char));
-		strncpy(old_str[hist - 1], str, size_msg);
+		old_str[hist - 1] = (char *) calloc(size_msg, sizeof(char));
+		if (old_str[hist - 1] != NULL)
+		{
+			CopieChaine(old_str[hist - 1], str, size_msg);
+		}
 	}
 
 	/* Ecrit le texte */
@@ -130,15 +152,12 @@ void MessageBox::EcritMessage(char *str)
 	/* Synchro avec l'affichage */
 	XFlush(f->display);
 
-	RESTORE;
 }
 
 void MessageBox::Rafraichir()
 {
 	int		i;
 
-	SAUVE;
-	INSTALL("MessageBox::Rafraichir()");
 
 	/* Efface la zone */
 	XClearArea(f->display, f->fenetre, zone_msg_x + 3, zone_msg_y + 3, 
@@ -173,20 +192,22 @@ void MessageBox::Rafraichir()
 	/* Synchro avec l'affichage */
 	XFlush(f->display);
 
-	RESTORE;
 }
 
 int MessageBox::OnClic(Evenement *evt)
 {
+	(void) evt;
 	return 0;
 }
 
 int MessageBox::OnMove(Evenement *evt)
 {
+	(void) evt;
 	return 0;
 }
 
 int MessageBox::OnKey(Evenement *evt)
 {
+	(void) evt;
 	return 0;
 }

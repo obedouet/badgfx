@@ -6,15 +6,19 @@
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 
+class Composant;
+
 class Fenetre
 {
 private:
 	/*** Variables globales ***/
-	void 	*First_Comp;
+	Composant	*First_Comp;
 	int	pas_fini;
 	int	largeur,
 		hauteur;
-	char	*f_titre;
+	const char	*f_titre;
+	Atom	wm_protocols,
+		wm_delete;
 
 	// Fonctions privées
 	int OuvreFenetre(void);
@@ -40,14 +44,14 @@ public:
 	Fenetre();
 	~Fenetre();
 	Fenetre(int l, int h);
-	Fenetre(int l, int h, char *f_title);
+	Fenetre(int l, int h, const char *f_title);
 	void MainLoop(void);
 	void FinLoop(void);
-	int ChargeCouleur(char *str);
-	void AjouteComposant(void *comp);
+	unsigned long ChargeCouleur(const char *str);
+	void AjouteComposant(Composant *comp);
 	int CheckEvenement(Evenement *evt);
 	void Taille(Coord *f_taille);
-	void ChgTitre(char *f_title);
+	void ChgTitre(const char *f_title);
 };
 
 #endif

@@ -18,14 +18,14 @@ private:
 	void (*Action)(Composant *C);	/* Action */
 
 public:
-	Bouton(Fenetre *fen, Coord *coords, char *txt, int typ);
+	Bouton(Fenetre *fen, Coord *coords, const char *txt, int typ);
 	~Bouton();
 	void Rafraichir(void);
 	int OnClic(Evenement *evt);
 	int OnMove(Evenement *evt);
 	int OnKey(Evenement *evt);
 	void ChgAction(void (*fct)(Composant *C));
-	int ChgTexte(char *txt);
+	int ChgTexte(const char *txt);
 };
 
 #endif

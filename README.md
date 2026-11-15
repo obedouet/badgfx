@@ -18,7 +18,6 @@ Events from Xlib are translated into a generic `Evenement` struct (keyboard buff
 ## Hello World
 
 ```cpp
-#define MAIN
 #include <badgfx.hpp>
 
 Fenetre Fen1(200, 80, "Hello World");
@@ -42,28 +41,25 @@ int main(void)
 }
 ```
 
-`main.cpp` must define `MAIN` before including `badgfx.hpp` (it instantiates a debug symbol).
+No special macro is required before including `badgfx.hpp`.
 
 ## Building
 
 Requirements: X11 development headers (`libx11-dev` on Debian/Ubuntu, `xorg-x11-proto-devel` + `libX11-devel` on Fedora) and `g++`.
 
-Compile the library sources, then the example:
+From the example directory:
 
 ```sh
-# from the repository root
-g++ -Wall -O -I. -c fenetre.cpp bouton.cpp composant.cpp message.cpp
-
 cd examples/HelloWorld
 make
 ./helloworld
 ```
 
-> Note: the example `Makefile` dates from ~2002. It assumes the repository directory is named `BadGFX` (`BADGFXDIR=../BadGFX`) and hardcodes `/usr/X11R6` paths. On modern systems you may need to adapt those paths (on most distros plain `-I. -lX11` is enough).
+The `Makefile` also compiles the library sources from the repository root. Closing the window through the window manager now exits `MainLoop()` instead of leaving the program waiting forever.
 
 ## Heads-up: this is 20-year-old code
 
-The code is published as-is, for historical and fun purposes. Expect pre-modern-C++ habits (`void` parameters, `(void *)` component lists, fixed 64-byte debug buffers, `strcpy`/`malloc` usage, French identifiers: *fenêtre*, *bouton*, *composant*, *message*) and see the source files for a few known quirks. Patches to modernize it are welcome — see `LICENSE`.
+The code keeps its original French identifiers and simple callback style: *fenêtre*, *bouton*, *composant*, *message*. Recent cleanups fixed const-correctness, unsafe `strcpy` use, uninitialized pointer risks, and missing X11 window-close handling without trying to rewrite BadGFX into a modern GUI framework.
 
 ## License
 

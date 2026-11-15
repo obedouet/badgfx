@@ -6,15 +6,8 @@
  * Date : 24/03/2002
  */
 
-// ==== Macros pour debugage ==== 
-#define INSTALL(mess) strcpy(func, mess)
-#define SAUVE char sauv[64]; strcpy(sauv, func)
-#define RESTORE strcpy(func, sauv)
-#ifdef MAIN
-char func[64];
-#else
-extern char func[64];
-#endif
+#ifndef BADGFX_HPP
+#define BADGFX_HPP
 
 // ==== Types graphiques ==== 
 // type coordonnées graphiques
@@ -67,8 +60,17 @@ typedef struct
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 
+// ==== Fonction utilitaire ====
+// Copie une chaine dans un tampon fixe, toujours terminee par '\0'
+static inline void CopieChaine(char *dest, const char *src, unsigned int n)
+{
+	strncpy(dest, src, n - 1);
+	dest[n - 1] = '\0';
+}
+
 #include <fenetre.hpp>
 #include <composant.hpp>
 #include <bouton.hpp>
 #include <message.hpp>
 
+#endif
